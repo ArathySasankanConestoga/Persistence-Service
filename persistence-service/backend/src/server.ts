@@ -2,6 +2,7 @@ import cors from "cors";
 import express, { json } from "express";
 import postgresDataSource from "./strategy/postgresql";
 import { Photo } from "./strategy/postgresql/photo";
+import { Video } from "./strategy/postgresql/video";
 
 async function datamanager(environment: "prod" | "test") {
   if (environment === "prod") {
@@ -17,7 +18,7 @@ async function datamanager(environment: "prod" | "test") {
           filename: "photo-with-bears.jpg",
           views: 1,
           isPublished: true,
-        }
+        }//save should be there
       }
     }
   }
@@ -29,7 +30,7 @@ async function datamanager(environment: "prod" | "test") {
   app.use(cors());
   app.use(json());
 
-  const datasource = process.env.IS_PROD ? await datamanager("prod") : await datamanager("test");
+  const datasource = await postgresDataSource.initialize();
 
   app.get("/bearphoto", async (_, res) => {
     const result = await datasource.manager.find(Photo);
@@ -59,6 +60,27 @@ async function datamanager(environment: "prod" | "test") {
     photo.name = name;
     photo.description = description
     photo.filename = "photo-with-bears.jpg"
+    photo.views = 1
+    photo.isPublished = true
+
+    await datasource.manager.save(photo)
+    return res.send({ message: "this operation was successful."})
+  });
+
+  app.post("/catphoto/:name/:description", async (req, res) => {
+    const name = req.params.name;
+
+    if (name === "duck") {
+      res.status(302);
+      return res.send("ducks are not cats");
+    }
+
+    const description = req.params.description;
+
+    const photo = new Video()
+    photo.name = name;
+    photo.description = description
+    photo.filename = "photo-with-cats.jpg"
     photo.views = 1
     photo.isPublished = true
 
