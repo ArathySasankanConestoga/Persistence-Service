@@ -87,4 +87,54 @@ This command will kill the running container and remove it.
 
 ```bash
 docker rm -f persistence
+
+
+#### Final Exam Functionalities
+
+## **Overview**
+This project is a **database-driven service** built using **Node.js, Express, TypeORM, and PostgreSQL**. It manages entities like **Movie, Staff, and ProductionStaff**, and provides **CRUD operations** for these tables.
+
+## **Prerequisites**
+Ensure you have the following installed:
+- **Node.js** (Recommended: LTS version)
+- **Docker & Docker Compose** (For running PostgreSQL & PgAdmin)
+- **Postman** (Optional, for API testing)
+
+## **Setup Instructions**
+### **1. Clone the Repository**
+```bash
+git clone https://github.com/your-repo/persistence-service.git
+cd persistence-service
 ```
+
+
+### 2. Start PostgreSQL Using Docker**
+```bash
+docker-compose up -d --build
+```
+
+The API will be accessible at:  
+`http://localhost:8081`
+
+## **Testing with Postman**
+1. **Import API Requests:**  
+   Open Postman and manually enter API requests, or create a **Postman Collection**.
+2. **Make Requests:**  
+   - Select the method (`GET`, `POST`, `DELETE`, `PUT`)
+   - Provide the correct URL (`http://localhost:8081/movies`)
+   - For `POST` & `PUT`, go to `"Body"` tab → Select `"raw → JSON"`.
+3. **Verify Responses:**  
+   - **200 OK:** Successful operation  
+   - **201 Created:** Resource added successfully  
+   - **404 Not Found:** Invalid ID  
+   - **409 Conflict:** Duplicate entry  
+   - **500 Internal Server Error:** Unexpected issues
+
+---
+
+## **Stopping the Server**
+To stop the running containers:
+```bash
+docker-compose down
+```
+
