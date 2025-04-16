@@ -362,6 +362,90 @@ app.put("/staff/:id", async (req, res) => {
 
 
 
+
+// GET: Retrieve all contracts
+app.get("/contracts", async (_, res) => {
+  try {
+    const result = await datasource.manager.find(Contract);
+    console.log(result);
+    return res.send(result);
+  } catch (error) {
+    console.error("Error retrieving contracts:", error);
+    return res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+// Function to create a contract instance
+function createContract(staffId: number, productionCost: number): Contract {
+  const contract = new Contract();
+  contract.staff_id = staffId;
+  contract.production_cost = productionCost;
+
+  console.log("Created contract:", contract);
+  return contract;
+}
+
+// POST: Create a new contract entry
+app.post("/contracts", async (req, res) => {
+  try {
+    const { staff_id, production_cost } = req.body;
+
+    console.log("Received request:", { staff_id, production_cost });
+
+    const newContract = createContract(staff_id, parseFloat(production_cost));
+
+    await datasource.manager.save(newContract);
+    res.status(201).send({ status: 201, message: "Contract created successfully.", result: newContract });
+  } catch (error) {
+    console.error("Error creating contract:", error);
+    return res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+// DELETE: Remove a contract entry
+app.delete("/contracts/:id", async (req, res) => {
+  try {
+    const contractId = parseInt(req.params.id);
+
+    const contract = await datasource.manager.findOne(Contract, { where: { contract_Id: contractId } });
+
+    if (!contract) {
+      return res.status(404).send({ message: "Contract not found." });
+    }
+
+    await datasource.manager.remove(contract);
+    res.status(200).send({ message: "Contract deleted successfully." });
+  } catch (error) {
+    console.error("Error deleting contract:", error);
+    return res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+// PUT: Update a contract entry
+app.put("/contracts/:id", async (req, res) => {
+  try {
+    const contractId = parseInt(req.params.id);
+    const { staff_id, production_cost } = req.body;
+
+    const contract = await datasource.manager.findOne(Contract, { where: { contract_Id: contractId } });
+
+    if (!contract) {
+      return res.status(404).send({ message: "Contract not found." });
+    }
+
+    contract.staff_id = staff_id !== undefined ? staff_id : contract.staff_id;
+    contract.production_cost = production_cost !== undefined ? parseFloat(production_cost) : contract.production_cost;
+
+    await datasource.manager.save(contract);
+    res.status(200).send({ message: "Contract updated successfully.", result: contract });
+  } catch (error) {
+    console.error("Error updating contract:", error);
+    return res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+
+
   
 
   app.listen(8000, () => {
