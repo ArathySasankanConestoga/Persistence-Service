@@ -11,19 +11,26 @@ async function datamanager(environment: "prod" | "test") {
   
   return {
     manager: {
-      find: (entity: any) => {
+      find: (entity: any) => ({
+        name: "a testname",
+        description: "description",
+        filename: "photo-with-bears.jpg",
+        views: 1,
+        isPublished: true,
+      }),
+      save: (entity: any) => {
+        console.log("Saving entity:", entity);
         return {
           name: "a testname",
           description: "description",
           filename: "photo-with-bears.jpg",
           views: 1,
           isPublished: true,
-        }//save should be there
-      }
-    }
-  }
+        };
+      },
+    },
+  };
 }
-
 
 (async () => {
   const app = express();
@@ -34,67 +41,104 @@ async function datamanager(environment: "prod" | "test") {
 
   app.get("/bearphoto", async (_, res) => {
     const result = await datasource.manager.find(Photo);
-
     console.log(result);
-
     return res.send(result);
   });
 
-  // get
   app.get("/sample", (_, res) => {
-    return res.send("hello world 2")
+    return res.send("Hello world 2");
   });
 
-  // create
+  function realBearCreator(name: string, description: string): Photo {
+    const photo = new Photo();
+    photo.name = name;
+    photo.description = description;
+    photo.filename = "photo-with-bears.jpg";
+    photo.views = 1;
+    photo.isPublished = true;
+
+    console.log("Created a bear photo:", photo);
+    return photo;
+  }
+
+  function successFailedBearCreator(name: string, description: string): Photo | null {
+    const restricted = ["duck", "cat", "dog", "fox"];
+
+    if (restricted.includes(name.toLowerCase())) {
+      console.log(`${name}s are not bears.`);
+      return null;
+    }
+
+    return realBearCreator(name, description);
+  }
+
+  function failureFailedBearCreator(name: string, description: string): Photo | null {
+    if (!name.trim() || !description.trim()) {
+      console.log("Invalid name or description.");
+      return null;
+    }
+
+    return realBearCreator(name, description);
+  }
+
+  
+  const functionMap: Record<string, (name: string, description: string) => Photo | null> = {
+    realBearCreator,
+    successFailedBearCreator,
+    failureFailedBearCreator,
+  };
+
   app.post("/bearphoto/:name/:description", async (req, res) => {
     const name = req.params.name;
-
-    if (name === "duck") {
-      res.status(302);
-      return res.send("ducks are not bears");
-    }
-
     const description = req.params.description;
 
-    const photo = new Photo()
-    photo.name = name;
-    photo.description = description
-    photo.filename = "photo-with-bears.jpg"
-    photo.views = 1
-    photo.isPublished = true
+    console.log("Received request:", { name, description, creatorFunction: req.body.creatorFunction });
 
-    await datasource.manager.save(photo)
-    return res.send({ message: "this operation was successful."})
-  });
+    const existingPhoto = await datasource.manager.find(Photo, {
+      where: { name, description },
+    });
 
-  app.post("/catphoto/:name/:description", async (req, res) => {
-    const name = req.params.name;
-
-    if (name === "duck") {
-      res.status(302);
-      return res.send("ducks are not cats");
+    if (existingPhoto.length > 0) {
+      return res.status(409).send({ message: "Photo already exists." });
     }
 
-    const description = req.params.description;
+    
+    const selectedFunction = functionMap[req.body.creatorFunction];
 
-    const photo = new Video()
-    photo.name = name;
-    photo.description = description
-    photo.filename = "photo-with-cats.jpg"
-    photo.views = 1
-    photo.isPublished = true
+    if (!selectedFunction) {
+      return res.status(400).send({ message: "Invalid function name provided." });
+    }
 
-    await datasource.manager.save(photo)
-    return res.send({ message: "this operation was successful."})
+    const result = await createPhotoBear(name, description, selectedFunction);
+
+    if (!result.result) {
+      return res.status(400).send({ message: "Invalid request." });
+    }
+
+    await datasource.manager.save(result.result);
+
+    res.status(200).send(result);
   });
 
-  //edit
-  // app.put
+  async function createPhotoBear(
+    name: string,
+    description: string,
+    creatorFunction: (name: string, description: string) => Photo | null
+  ): Promise<{ status: number; message: string; result?: Photo }> {
+    name = name.toLowerCase();
+    description = description.toLowerCase();
 
+    const photo = creatorFunction(name, description);
 
-  // delete
-  // app.delete
+    if (!photo) {
+      return { status: 400, message: "Invalid request." };
+    }
+
+    return { status: 200, message: "Operation successful.", result: photo };
+  }
+
   app.listen(8000, () => {
-    console.log(`express server started on 8000`);
+    console.log(`Express server started on port 8000`);
   });
+
 })().catch((err) => console.log(err));
