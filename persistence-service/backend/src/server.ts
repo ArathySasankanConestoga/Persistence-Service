@@ -3,6 +3,8 @@ import express, { json } from "express";
 import postgresDataSource from "./strategy/postgresql";
 import { Photo } from "./strategy/postgresql/photo";
 import { Video } from "./strategy/postgresql/video";
+import { Movie } from "./strategy/postgresql/movie";
+import { Staff } from "./strategy/postgresql/staff";
 
 async function datamanager(environment: "prod" | "test") {
   if (environment === "prod") {
@@ -43,11 +45,7 @@ async function datamanager(environment: "prod" | "test") {
     const result = await datasource.manager.find(Photo);
     console.log(result);
     return res.send(result);
-  });
-
-  app.get("/sample", (_, res) => {
-    return res.send("Hello world 2");
-  });
+  });  
 
   function realBearCreator(name: string, description: string): Photo {
     const photo = new Photo();
@@ -136,6 +134,235 @@ async function datamanager(environment: "prod" | "test") {
 
     return { status: 200, message: "Operation successful.", result: photo };
   }
+
+
+
+
+
+
+
+// GET: Retrieve all movies
+app.get("/movies", async (_, res) => {
+  try {
+    const result = await datasource.manager.find(Movie);
+    console.log(result);
+    return res.send(result);
+  } catch (error) {
+    console.error("Error retrieving movies:", error);
+    return res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+// Function to create a movie instance
+function createMovie(movieName: string, releaseDate: Date, rating: number, genre: string, award: string): Movie {
+  const movie = new Movie();
+  movie.movieName = movieName;
+  movie.releaseDate = releaseDate;
+  movie.rating = rating;
+  movie.genre = genre;
+  movie.award = award;
+
+  console.log("Created movie:", movie);
+  return movie;
+}
+
+// POST: Create a new movie entry
+app.post("/movies", async (req, res) => {
+  try {
+    const { movieName, releaseDate, rating, genre, award } = req.body;
+
+    console.log("Received request:", { movieName, releaseDate, rating, genre, award });
+
+    const existingMovie = await datasource.manager.find(Movie, {
+      where: { movieName, releaseDate: new Date(releaseDate) }, // Ensure conversion to Date
+    });
+
+    if (existingMovie.length > 0) {
+      return res.status(409).send({ message: "Movie already exists." });
+    }
+
+    const newMovie = createMovie(movieName, new Date(releaseDate), parseFloat(rating), genre, award);
+
+    await datasource.manager.save(newMovie);
+    res.status(201).send({ status: 201, message: "Movie created successfully.", result: newMovie });
+  } catch (error) {
+    console.error("Error creating movie:", error);
+    return res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+// DELETE: Remove a movie entry
+app.delete("/movies/:id", async (req, res) => {
+  try {
+    const movieId = parseInt(req.params.id);
+
+    const movie = await datasource.manager.findOne(Movie, { where: { id: movieId } });
+
+    if (!movie) {
+      return res.status(404).send({ message: "Movie not found." });
+    }
+
+    await datasource.manager.remove(movie);
+    res.status(200).send({ message: "Movie deleted successfully." });
+  } catch (error) {
+    console.error("Error deleting movie:", error);
+    return res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+// PUT: Update a movie entry
+app.put("/movies/:id", async (req, res) => {
+  try {
+    const movieId = parseInt(req.params.id);
+    const { movieName, releaseDate, rating, genre, award } = req.body;
+
+    const movie = await datasource.manager.findOne(Movie, { where: { id: movieId } });
+
+    if (!movie) {
+      return res.status(404).send({ message: "Movie not found." });
+    }
+
+    movie.movieName = movieName || movie.movieName;
+    movie.releaseDate = releaseDate ? new Date(releaseDate) : movie.releaseDate; // Ensure conversion
+    movie.rating = rating ? parseFloat(rating) : movie.rating;
+    movie.genre = genre || movie.genre;
+    movie.award = award || movie.award;
+
+    await datasource.manager.save(movie);
+    res.status(200).send({ message: "Movie updated successfully.", result: movie });
+  } catch (error) {
+    console.error("Error updating movie:", error);
+    return res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+
+
+
+
+
+// GET: Retrieve all staff members
+app.get("/staff", async (_, res) => {
+  try {
+    const result = await datasource.manager.find(Staff);
+    console.log(result);
+    return res.send(result);
+  } catch (error) {
+    console.error("Error retrieving staff members:", error);
+    return res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+// Function to create a staff member instance
+function createStaff(
+  staffName: string,
+  unionId: number,
+  dateOfBirth: Date,
+  phoneNumber: number,
+  nationality: string,
+  email: string,
+  staff_role: string,
+  biography_name: string
+): Staff {
+  const staff = new Staff();
+  staff.staffName = staffName;
+  staff.unionId = unionId;
+  staff.dateOfBirth = dateOfBirth;
+  staff.phoneNumber = phoneNumber;
+  staff.nationality = nationality;
+  staff.email = email;
+  staff.staff_role = staff_role;
+  staff.biography_name = biography_name;
+
+  console.log("Created staff:", staff);
+  return staff;
+}
+
+// POST: Create a new staff member
+app.post("/staff", async (req, res) => {
+  try {
+    const { staffName, unionId, dateOfBirth, phoneNumber, nationality, email, staff_role, biography_name } = req.body;
+
+    console.log("Received request:", { staffName, unionId, dateOfBirth, phoneNumber, nationality, email, staff_role, biography_name });
+
+    const existingStaff = await datasource.manager.find(Staff, {
+      where: { email },
+    });
+
+    if (existingStaff.length > 0) {
+      return res.status(409).send({ message: "Staff member with this email already exists." });
+    }
+
+    const newStaff = createStaff(
+      staffName,
+      unionId,
+      new Date(dateOfBirth),
+      phoneNumber,
+      nationality,
+      email,
+      staff_role,
+      biography_name
+    );
+
+    await datasource.manager.save(newStaff);
+    res.status(201).send({ status: 201, message: "Staff member created successfully.", result: newStaff });
+  } catch (error) {
+    console.error("Error creating staff member:", error);
+    return res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+// DELETE: Remove a staff member
+app.delete("/staff/:id", async (req, res) => {
+  try {
+    const staffId = parseInt(req.params.id);
+
+    const staff = await datasource.manager.findOne(Staff, { where: { staffId } });
+
+    if (!staff) {
+      return res.status(404).send({ message: "Staff member not found." });
+    }
+
+    await datasource.manager.remove(staff);
+    res.status(200).send({ message: "Staff member deleted successfully." });
+  } catch (error) {
+    console.error("Error deleting staff member:", error);
+    return res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+// PUT: Update a staff member entry
+app.put("/staff/:id", async (req, res) => {
+  try {
+    const staffId = parseInt(req.params.id);
+    const { staffName, unionId, dateOfBirth, phoneNumber, nationality, email, staff_role, biography_name } = req.body;
+
+    const staff = await datasource.manager.findOne(Staff, { where: { staffId } });
+
+    if (!staff) {
+      return res.status(404).send({ message: "Staff member not found." });
+    }
+
+    staff.staffName = staffName || staff.staffName;
+    staff.unionId = unionId !== undefined ? unionId : staff.unionId;
+    staff.dateOfBirth = dateOfBirth ? new Date(dateOfBirth) : staff.dateOfBirth;
+    staff.phoneNumber = phoneNumber !== undefined ? phoneNumber : staff.phoneNumber;
+    staff.nationality = nationality || staff.nationality;
+    staff.email = email || staff.email;
+    staff.staff_role = staff_role || staff.staff_role;
+    staff.biography_name = biography_name || staff.biography_name;
+
+    await datasource.manager.save(staff);
+    res.status(200).send({ message: "Staff member updated successfully.", result: staff });
+  } catch (error) {
+    console.error("Error updating staff member:", error);
+    return res.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+
+
+  
 
   app.listen(8000, () => {
     console.log(`Express server started on port 8000`);
