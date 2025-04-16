@@ -5,6 +5,8 @@ import { Photo } from "./strategy/postgresql/photo";
 import { Video } from "./strategy/postgresql/video";
 import { Movie } from "./strategy/postgresql/movie";
 import { Staff } from "./strategy/postgresql/staff";
+import { Contract } from "./strategy/postgresql/contract";
+import { Pstaff } from "./strategy/postgresql/pstaff";
 
 async function datamanager(environment: "prod" | "test") {
   if (environment === "prod") {
